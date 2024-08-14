@@ -1,65 +1,71 @@
-const express = require("express");
-const cors = require("cors");
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const mongoose = require('mongoose')
+const Note = require('./models/note')
 
-const app = express();
-app.use(cors());
-app.use(express.static("dist"));
+const app = express()
+app.use(express.json())
+app.use(cors())
+app.use(express.static('dist'))
 
-let notes = [
-  {
-    id: "1",
-    content: "HTML is easy",
-    important: true,
-  },
-  {
-    id: "2",
-    content: "Browser can execute only JavaScript",
-    important: false,
-  },
-  {
-    id: "3",
-    content: "GET and POST are the most important methods of HTTP protocol",
-    important: true,
-  },
-];
+const url = process.env.MONGODB_URI
 
-app.get("/", (request, response) => {
-  response.send("<h1>Hello World!</h1>");
-});
+mongoose.set('strictQuery', false)
 
-app.get("/api/notes", (request, response) => {
-  response.json(notes);
-});
+mongoose.connect(url)
 
-app.get("/api/notes/:id", (request, response) => {
-  const id = request.params.id;
-  const note = notes.find((note) => note.id === id);
+app.get('/', (req, res) => {
+  res.send('<h1>Hello World!</h1>')
+})
 
-  if (note) {
-    response.json(note);
-  } else {
-    response.status(404).end();
-  }
-});
+app.get('/api/notes', (req, res) => {
+  Note.find({}).then((notes) => {
+    res.json(notes)
+  })
+})
 
-app.post("/api/notes", (request, response) => {
-  const maxId = notes.length > 0 ? notes.length + 1 : 0;
+app.get('/api/notes/:id', (req, res) => {
+  Note.find({ _id: req.params.id }).then((note) => {
+    if (note) {
+      res.json(note)
+    } else {
+      res.status(404).end()
+    }
+  })
+})
 
-  const note = request.body;
-  note.id = String(maxId + 1);
-  notes = notes.concat(note);
+app.post('/api/notes', (req, res, next) => {
+  const note = new Note(req.body)
+  note
+    .save()
+    .then((result) => res.json(result))
+    .catch((err) => next(err))
+})
 
-  response.json(note);
-});
+app.put('/api/notes/:id', (req, res, next) => {
+  Note.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    .then((note) => res.json(note))
+    .catch((err) => next(err))
+})
 
-app.delete("/api/notes/:id", (request, response) => {
-  const id = request.params.id;
-  notes = notes.filter((note) => note.id !== id);
+app.delete('/api/notes/:id', (req, res, next) => {
+  Note.findByIdAndDelete(req.params.id)
+    .then(() => res.status(204).end())
+    .catch((err) => next(err))
+})
 
-  response.status(204).end();
-});
+app.use((req, res) => {
+  res.status(404).send({ error: 'unknown endpoint' })
+})
 
-const PORT = process.env.PORT || 3001;
+app.use((error, req, res, next) => {
+  console.error(error)
+
+  next(error)
+})
+
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  console.log(`Server running on port ${PORT}`)
+})
