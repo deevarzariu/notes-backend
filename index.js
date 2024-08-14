@@ -44,7 +44,11 @@ app.post('/api/notes', (req, res, next) => {
 })
 
 app.put('/api/notes/:id', (req, res, next) => {
-  Note.findByIdAndUpdate(req.params.id, req.body, { new: true })
+  Note.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+    context: 'query',
+  })
     .then((note) => res.json(note))
     .catch((err) => next(err))
 })
@@ -61,6 +65,12 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   console.error(error)
+
+  if (error.name === 'CastError') {
+    return res.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).json({ error: error.message })
+  }
 
   next(error)
 })
