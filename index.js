@@ -26,7 +26,7 @@ app.get('/api/notes', (req, res) => {
 })
 
 app.get('/api/notes/:id', (req, res) => {
-  Note.find({ _id: req.params.id }).then((note) => {
+  Note.findOne({ _id: req.params.id }).then((note) => {
     if (note) {
       res.json(note)
     } else {
